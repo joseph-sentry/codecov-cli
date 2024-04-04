@@ -19,6 +19,7 @@ jobs:
           - os: macos-latest
             TARGET: macos
             CMD_REQS: >
+              export ARCHFLAGS="-arch x86_64 -arch arm64"
               mkdir -p pip-packages && cd pip-packages && pip wheel --no-cache-dir --no-binary tree_sitter,ijson,charset_normalizer,PyYAML .. && cd .. &&
               pip install --no-deps --no-index --find-links=pip-packages pip-packages/*
             CMD_BUILD: >
