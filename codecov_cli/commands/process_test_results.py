@@ -158,7 +158,7 @@ def create_github_comment(token, repo_slug, pr_number, message):
     comments = loads(result.text)
     for comment in comments:
         print(comment['body'])
-        if f"<!-- Codecov comment for {} -->" in comment:
+        if f"<!-- Codecov comment for -->" in comment:
             url = comment['url']
             log_warnings_and_errors_if_any(
                 send_patch_request(url=url, data={"body": message}, headers=headers),
