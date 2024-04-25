@@ -3,6 +3,7 @@ import os
 import pathlib
 from dataclasses import dataclass
 from typing import List
+from json import loads
 
 import click
 from test_results_parser import (
@@ -16,6 +17,8 @@ from test_results_parser import (
 from codecov_cli.helpers.request import (
     log_warnings_and_errors_if_any,
     send_post_request,
+    send_get_request,
+    send_patch_request
 )
 from codecov_cli.services.upload.file_finder import select_file_finder
 
@@ -64,6 +67,12 @@ _process_test_results_options = [
         type=str,
         default=None,
     ),
+    click.option(
+        "--matrix",
+        help="github actions matrix",
+        type=str,
+        default=None
+    )
 ]
 
 
@@ -84,8 +93,10 @@ class TestResultsNotificationPayload:
 @click.command()
 @process_test_results_options
 def process_test_results(
-    dir=None, files=None, exclude_folders=None, disable_search=None, provider_token=None
+    dir=None, files=None, exclude_folders=None, disable_search=None, provider_token=None, matrix=None
 ):
+    print(matrix)
+    exit(1)
     if provider_token is None:
         raise click.ClickException(
             "Provider token was not provided. Make sure to pass --provider-token option with the contents of the GITHUB_TOKEN secret, so we can make a comment."
@@ -134,19 +145,34 @@ def process_test_results(
 
 
 def create_github_comment(token, repo_slug, pr_number, message):
-    url = f"https://api.github.com/repos/{repo_slug}/issues/{pr_number}/comments"
-
     headers = {
         "Accept": "application/vnd.github+json",
         "Authorization": f"Bearer {token}",
         "X-GitHub-Api-Version": "2022-11-28",
     }
-    logger.info("Posting github comment")
 
-    log_warnings_and_errors_if_any(
-        send_post_request(url=url, data={"body": message}, headers=headers),
-        "Posting test results comment",
-    )
+    url = f"https://api.github.com/repos/{repo_slug}/issues/{pr_number}/comments"
+
+    # list comments
+    result = send_get_request(url=url, headers=headers)
+    comments = loads(result.text)
+    for comment in comments:
+        print(comment['body'])
+        if f"<!-- Codecov comment for {} -->" in comment:
+            url = comment['url']
+            log_warnings_and_errors_if_any(
+                send_patch_request(url=url, data={"body": message}, headers=headers),
+                "Posting test results comment",
+            )
+        else:
+            logger.info("Posting github comment")
+
+            log_warnings_and_errors_if_any(
+                send_post_request(url=url, data={"body": message}, headers=headers),
+                "Posting test results comment",
+            )
+
+    exit(1)    
 
 
 def generate_message_payload(upload_collection_results):
