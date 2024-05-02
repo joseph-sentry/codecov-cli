@@ -54,18 +54,7 @@ class UploadSender(object):
             "ci_service": ci_service,
         }
 
-        # Data to upload to Codecov
-        pull_dict = (
-            get_pull(git_service, slug, pull_request_number) if not token else None
-        )
-
-        if is_fork_pr(pull_dict):
-            headers = {
-                "X-Tokenless": pull_dict["head"]["slug"],
-                "X-Tokenless-PR": pull_request_number,
-            }
-        else:
-            headers = get_token_header_or_fail(token)
+        headers = get_token_header_or_fail(token)
         encoded_slug = encode_slug(slug)
         upload_url = enterprise_url or CODECOV_API_URL
         url, data = self.get_url_and_possibly_update_data(
