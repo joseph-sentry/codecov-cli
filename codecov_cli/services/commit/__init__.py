@@ -46,6 +46,7 @@ def send_commit_data(
     tokenless = os.environ.get("TOKENLESS", None)
     if tokenless:
         branch = tokenless  # we must overwrite the branch
+        headers = {"X-Tokenless": tokenless}
     else:
         headers = get_token_header_or_fail(token)
 
