@@ -5,7 +5,7 @@ import os
 from codecov_cli.helpers.config import CODECOV_API_URL
 from codecov_cli.helpers.encoder import encode_slug
 from codecov_cli.helpers.request import (
-    get_token_header_or_fail,
+    get_auth_header,
     log_warnings_and_errors_if_any,
     send_post_request,
 )
@@ -43,13 +43,7 @@ def create_commit_logic(
 def send_commit_data(
     commit_sha, parent_sha, pr, branch, slug, token, service, enterprise_url
 ):
-    tokenless = os.environ.get("TOKENLESS", None)
-    if tokenless:
-        branch = tokenless  # we must overwrite the branch
-        headers = {"X-Tokenless": tokenless}
-    else:
-        headers = get_token_header_or_fail(token)
-
+    headers = get_auth_header(token)
     data = {
         "commitid": commit_sha,
         "parent_commit_id": parent_sha,

@@ -7,6 +7,7 @@ import requests
 
 from codecov_cli import __version__
 from codecov_cli.types import RequestError, RequestResult
+import os
 
 logger = logging.getLogger("codecovcli")
 
@@ -93,6 +94,15 @@ def get_token_header_or_fail(token: str) -> dict:
             "Codecov token not found. Please provide Codecov token with -t flag."
         )
     return {"Authorization": f"token {token}"}
+
+
+def get_auth_header(token):
+    tokenless = os.environ.get("TOKENLESS", None)
+    if tokenless:
+        headers = {"X-Tokenless": tokenless}
+    else:
+        headers = get_token_header_or_fail(token)
+    return headers
 
 
 @retry_request
