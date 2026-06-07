@@ -17,6 +17,8 @@ def get_cli_args(ctx: click.Context):
     args.update(ctx.params)
     if "token" in args:
         del args["token"]
+    if "http_header" in args:
+        del args["http_header"]
 
     filtered_args = {}
     for k in args.keys():

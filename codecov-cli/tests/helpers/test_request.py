@@ -5,11 +5,14 @@ import requests
 from requests import Response
 
 from codecov_cli import __version__
+from codecov_cli.helpers import request as request_module
 from codecov_cli.helpers.request import (
+    _prepare_headers,
     get,
     get_token_header,
     get_token_header_or_fail,
     log_warnings_and_errors_if_any,
+    set_extra_headers,
 )
 from codecov_cli.helpers.request import logger as req_log
 from codecov_cli.helpers.request import (
@@ -186,3 +189,65 @@ def test_user_agent(mocker):
         side_effect=mock_request,
     )
     patch("my_url")
+
+
+class TestExtraHeaders:
+    @pytest.fixture(autouse=True)
+    def reset_extra_headers(self):
+        set_extra_headers({})
+        yield
+        set_extra_headers({})
+
+    def test_prepare_headers_without_extra(self):
+        headers = _prepare_headers()
+        assert headers == {"User-Agent": f"codecov-cli/{__version__}"}
+
+    def test_prepare_headers_with_extra(self):
+        set_extra_headers({"CF-Access-Client-Id": "abc123"})
+        headers = _prepare_headers()
+        assert headers["CF-Access-Client-Id"] == "abc123"
+        assert headers["User-Agent"] == f"codecov-cli/{__version__}"
+
+    def test_extra_headers_dont_overwrite_authorization(self):
+        set_extra_headers({"Authorization": "evil"})
+        headers = _prepare_headers({"Authorization": "token real-token"})
+        assert headers["Authorization"] == "token real-token"
+
+    def test_extra_headers_dont_overwrite_user_agent(self):
+        set_extra_headers({"User-Agent": "custom-agent"})
+        headers = _prepare_headers()
+        assert headers["User-Agent"] == f"codecov-cli/{__version__}"
+
+    def test_extra_headers_merged_into_post(self, mocker):
+        set_extra_headers({"X-Custom": "value"})
+
+        def mock_post(*args, headers=None, **kwargs):
+            assert headers["X-Custom"] == "value"
+            assert headers["User-Agent"] == f"codecov-cli/{__version__}"
+            resp = Response()
+            resp.status_code = 200
+            resp._content = b"ok"
+            return resp
+
+        mocker.patch.object(requests, "post", side_effect=mock_post)
+        send_post_request("my_url")
+
+    def test_extra_headers_merged_into_get(self, mocker):
+        set_extra_headers({"X-Custom": "value"})
+
+        def mock_get(*args, headers=None, **kwargs):
+            assert headers["X-Custom"] == "value"
+            resp = Response()
+            resp.status_code = 200
+            resp._content = b"ok"
+            return resp
+
+        mocker.patch.object(requests, "get", side_effect=mock_get)
+        get("my_url")
+
+    def test_set_extra_headers_replaces_previous(self):
+        set_extra_headers({"A": "1"})
+        set_extra_headers({"B": "2"})
+        headers = _prepare_headers()
+        assert "A" not in headers
+        assert headers["B"] == "2"

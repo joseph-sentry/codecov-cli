@@ -22,6 +22,7 @@ from codecov_cli.commands.upload_process import upload_process
 from codecov_cli.helpers.ci_adapters import get_ci_adapter, get_ci_providers_list
 from codecov_cli.helpers.config import load_cli_config
 from codecov_cli.helpers.logging_utils import configure_logger
+from codecov_cli.helpers.request import set_extra_headers
 from codecov_cli.helpers.versioning_systems import get_versioning_system
 from codecov_cli.opentelemetry import init_telem
 
@@ -48,6 +49,11 @@ logger = logging.getLogger("codecovcli")
 @click.option(
     "--disable-telem", help="Disable sending telemetry data to Codecov", is_flag=True
 )
+@click.option(
+    "--http-header",
+    multiple=True,
+    help="Extra HTTP header to send with every request (format: Header-Name:Value). Can be specified multiple times.",
+)
 @click.pass_context
 @click.version_option(__version__, prog_name="codecovcli")
 def cli(
@@ -57,6 +63,7 @@ def cli(
     enterprise_url: str,
     verbose: bool = False,
     disable_telem: bool = False,
+    http_header: typing.Tuple[str, ...] = (),
 ):
     ctx.obj["cli_args"] = ctx.params
     ctx.obj["cli_args"]["version"] = f"cli-{__version__}"
@@ -72,6 +79,23 @@ def cli(
     ctx.obj["enterprise_url"] = enterprise_url
     ctx.obj["disable_telem"] = disable_telem
     ctx.obj["branding"] = [Branding.CODECOV]
+    if http_header:
+        extra = {}
+        for h in http_header:
+            if ":" not in h:
+                raise click.BadParameter(
+                    f"Invalid header format: '{h}'. Expected 'Header-Name:Value'.",
+                    param_hint="'--http-header'",
+                )
+            name, value = h.split(":", 1)
+            name = name.strip()
+            if not name:
+                raise click.BadParameter(
+                    f"Invalid header format: '{h}'. Header name cannot be empty.",
+                    param_hint="'--http-header'",
+                )
+            extra[name] = value.strip()
+        set_extra_headers(extra)
     init_telem(ctx.obj)
 
 

@@ -16,25 +16,33 @@ MAX_RETRIES = 3
 
 USER_AGENT = f"codecov-cli/{__version__}"
 
+_extra_headers: dict = {}
 
-def _set_user_agent(headers: Optional[dict] = None) -> dict:
+
+def set_extra_headers(headers: dict):
+    global _extra_headers
+    _extra_headers = dict(headers)
+
+
+def _prepare_headers(headers: Optional[dict] = None) -> dict:
     headers = headers or {}
-    headers.setdefault("User-Agent", USER_AGENT)
-    return headers
+    merged = {**_extra_headers, **headers}
+    merged["User-Agent"] = USER_AGENT
+    return merged
 
 
 def patch(url: str, headers: dict = None, json: dict = None) -> requests.Response:
-    headers = _set_user_agent(headers)
+    headers = _prepare_headers(headers)
     return requests.patch(url, json=json, headers=headers)
 
 
 def get(url: str, headers: dict = None, params: dict = None) -> requests.Response:
-    headers = _set_user_agent(headers)
+    headers = _prepare_headers(headers)
     return requests.get(url, params=params, headers=headers)
 
 
 def put(url: str, data: dict = None, headers: dict = None) -> requests.Response:
-    headers = _set_user_agent(headers)
+    headers = _prepare_headers(headers)
     return requests.put(url, data=data, headers=headers)
 
 
@@ -44,7 +52,7 @@ def post(
     headers: Optional[dict] = None,
     params: Optional[dict] = None,
 ) -> requests.Response:
-    headers = _set_user_agent(headers)
+    headers = _prepare_headers(headers)
     return requests.post(url, json=data, headers=headers, params=params)
 
 
