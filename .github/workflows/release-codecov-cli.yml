@@ -47,5 +47,6 @@ jobs:
       - name: Publish a message to a Pub/Sub topic
         env:
           CLOUDSDK_CORE_PROJECT: ${{ secrets.GCLOUD_UPLOADER_PROJECT_ID }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          gcloud pubsub topics publish ${{ secrets.GCLOUD_UPLOADER_PUBSUB_TOPIC }} --message '{"release":"'"${{ github.ref_name }}"'", "latest":true}'
+          gcloud pubsub topics publish ${{ secrets.GCLOUD_UPLOADER_PUBSUB_TOPIC }} --message '{"release":"'"$REF_NAME"'", "latest":true}'
